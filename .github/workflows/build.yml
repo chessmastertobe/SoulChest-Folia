@@ -31,7 +31,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SoulChest-${{ github.ref_name }}
+          name: SoulChest-${{ github.ref_name | replace('/', '-') }}
           path: target/SoulChest-*.jar
 
       - name: Create Release & Upload JAR
