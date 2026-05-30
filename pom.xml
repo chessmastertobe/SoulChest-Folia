@@ -35,6 +35,12 @@
             <artifactId>paper-api</artifactId>
             <version>${paper.version}</version>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- SQLite JDBC driver – shaded into the jar -->
@@ -99,6 +105,7 @@
                                 <excludes>
                                     <exclude>io.papermc.paper:*</exclude>
                                     <exclude>org.bukkit:*</exclude>
+                                    <exclude>org.slf4j:*</exclude>
                                 </excludes>
                             </artifactSet>
                             <!-- Relocate SQLite to avoid class conflicts with other plugins -->
