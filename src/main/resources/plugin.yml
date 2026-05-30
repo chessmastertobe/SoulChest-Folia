@@ -1,0 +1,115 @@
+name: SoulChest
+version: '${project.version}'
+main: com.soulchest.SoulChest
+api-version: '1.21'
+description: >
+  Feature-rich death chest plugin for Paper 26.1.
+  Saves inventory in a protected soul chest on death, with full GUI management.
+authors: [ SoulChestDev ]
+website: https://github.com/soulchest
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Commands
+# ──────────────────────────────────────────────────────────────────────────────
+commands:
+  sc:
+    description: SoulChest base command
+    usage: /sc <chests|tp|fetch|unlock|delete|admin|reload|version|help>
+    aliases: [ soulchest ]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Permissions
+# ──────────────────────────────────────────────────────────────────────────────
+permissions:
+
+  # ── Player permissions ──
+  soulchest.use:
+    description: Spawns a SoulChest instead of dropping items when the player dies.
+    default: true
+
+  soulchest.protect:
+    description: The player's SoulChest will be protected from other players.
+    default: true
+
+  soulchest.protect.ignore:
+    description: Allows opening another player's protected SoulChest.
+    default: op
+
+  soulchest.tp:
+    description: Allows teleporting to your own SoulChests (/sc tp).
+    default: true
+
+  soulchest.fetch:
+    description: Allows fetching your SoulChest to you (/sc fetch).
+    default: true
+
+  soulchest.unlock:
+    description: Allows unlocking your own SoulChest for everyone (/sc unlock).
+    default: true
+
+  soulchest.gui:
+    description: Allows opening the SoulChest GUI (/sc chests).
+    default: true
+
+  soulchest.toggle:
+    description: Allows the player to toggle SoulChest spawning on/off for themselves.
+    default: true
+
+  # ── Limit override permissions (highest number wins) ──
+  # Grant "soulchest.limit.10" to give a player a limit of 10 chests.
+  # Scanning from 1–100; the highest held permission wins.
+  soulchest.limit.1:
+    description: Override max chest limit to 1.
+    default: false
+  soulchest.limit.5:
+    description: Override max chest limit to 5.
+    default: false
+  soulchest.limit.10:
+    description: Override max chest limit to 10.
+    default: false
+  soulchest.limit.15:
+    description: Override max chest limit to 15.
+    default: false
+  soulchest.limit.20:
+    description: Override max chest limit to 20.
+    default: false
+  soulchest.limit.50:
+    description: Override max chest limit to 50.
+    default: false
+  soulchest.limit.unlimited:
+    description: Unlimited death chests.
+    default: false
+
+  # ── Admin permissions ──
+  soulchest.admin:
+    description: Access to all /sc admin sub-commands.
+    default: op
+    children:
+      soulchest.protect.ignore: true
+      soulchest.limit.unlimited: true
+
+  soulchest.reload:
+    description: Allows reloading the plugin config (/sc reload).
+    default: op
+
+  soulchest.version:
+    description: Allows checking the plugin version.
+    default: true
+
+  # ── Meta permission ──
+  soulchest.*:
+    description: Grants ALL SoulChest permissions.
+    default: false
+    children:
+      soulchest.use: true
+      soulchest.protect: true
+      soulchest.protect.ignore: true
+      soulchest.tp: true
+      soulchest.fetch: true
+      soulchest.unlock: true
+      soulchest.gui: true
+      soulchest.toggle: true
+      soulchest.admin: true
+      soulchest.reload: true
+      soulchest.version: true
+      soulchest.limit.unlimited: true

@@ -1,0 +1,139 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║            SoulChest – Configuration File                    ║
+# ║  Plugin for Paper 26.1 (Minecraft 1.21.11)                   ║
+# ║                                                              ║
+# ║  All colour/format codes use MiniMessage syntax:             ║
+# ║    <green>, <red>, <gold>, <bold>, <dark_purple> etc.        ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ─────────────────────────────────────────
+#  GENERAL SETTINGS
+# ─────────────────────────────────────────
+general:
+  # Default maximum number of death chests a player can have at once.
+  # Admins can override with:  soulchest.limit.<N>  or  /sc admin setlimit
+  default-max-chests: 5
+
+  # Seconds before a SoulChest expires and drops / deletes its contents.
+  # Use -1 for chests that never expire.
+  chest-duration: 600   # 10 minutes
+
+  # true  → expired chest DROPS items at the chest location
+  # false → expired chest DELETES items silently
+  drop-items-on-expire: false
+
+  # Capture and restore the player's XP when they loot the chest.
+  store-xp: true
+
+  # Spawn a SoulChest even when the player is killed by another player (PvP).
+  allow-chest-in-pvp: true
+
+  # Search for a safe surface when the player dies in the void.
+  find-safe-location-in-void: true
+
+  # Search for a safe surface when the player dies in / directly above lava.
+  find-safe-location-in-lava: true
+
+  # ── Safe-location search radius ───────────────────────────────
+  # Unit: CHUNKS  (1 chunk = 16 blocks).
+  # The finder checks all loaded blocks within this many chunks of
+  # the death location, nearest-first, then returns the closest safe spot.
+  # Only already-loaded chunks are searched (unloaded chunks are skipped).
+  # Example values:
+  #   5  →  80 blocks  (fast, works well in dense terrain)
+  #   10 → 160 blocks  (default — good coverage without noticeable lag)
+  #   20 → 320 blocks  (use only on powerful hardware)
+  safe-location-search-radius: 10
+
+  # Particle and sound effect when a SoulChest spawns?
+  spawn-effects: true
+
+  # Default symbol shown in the hologram above the chest.
+  default-symbol: "⚰"
+
+  # Show the cause of death in the hologram?
+  show-death-cause: true
+
+  # ── Prefix (MiniMessage format) ──────────────────────────────
+  # Prepended automatically to every chat message.
+  # Do NOT put <prefix> inside the `messages:` values below.
+  prefix: "<dark_gray>[<dark_purple>⚰ <light_purple>SoulChest<dark_gray>]<reset> "
+
+# ─────────────────────────────────────────
+#  CHEST PROTECTION
+# ─────────────────────────────────────────
+protection:
+  # Seconds the chest stays locked after spawning (-1 = manual unlock only).
+  auto-unlock-after: -1
+
+  # Prevent other players from opening a locked SoulChest.
+  protect-from-others: true
+
+  # Allow breaking the chest block to loot it?
+  # false = right-click only.
+  allow-break-to-loot: false
+
+# ─────────────────────────────────────────
+#  HOLOGRAM (TEXT DISPLAY ENTITY)
+# ─────────────────────────────────────────
+hologram:
+  enabled: true
+
+  # Placeholders: {symbol} {owner} {cause} {time_left} {world}
+  lines:
+    - "<dark_purple>{symbol} <light_purple>{owner}'s Soul Chest"
+    - "<gray>Cause: <white>{cause}"
+    - "<gray>Expires in: <yellow>{time_left}"
+
+  # Height above the chest block where the text floats.
+  y-offset: 1.5
+
+# ─────────────────────────────────────────
+#  GUI SETTINGS
+# ─────────────────────────────────────────
+gui:
+  list-title:       "<dark_purple>⚰ <light_purple>Your Soul Chests"
+  admin-list-title: "<dark_red>⚰ <red>{player}'s Soul Chests"
+  manage-title:     "<dark_purple>Manage Soul Chest"
+
+  show-view-button: true
+
+  filler-material:       BLACK_STAINED_GLASS_PANE
+  chest-icon-material:   CHEST
+  expired-icon-material: DEAD_BUSH
+
+# ─────────────────────────────────────────
+#  MESSAGES  (pure MiniMessage — no & codes, no <prefix> tag)
+# ─────────────────────────────────────────
+# The plugin automatically prepends `general.prefix` before every message.
+# Supported placeholders per message:
+#   chest-created       → {world} {x} {y} {z}
+#   chest-expired       → {world} {x} {y} {z}
+#   chest-limit-reached → {limit}
+#   admin-chest-deleted → {player}
+#   limit-set           → {player} {limit}
+#   symbol-changed      → {symbol}
+messages:
+  chest-created:        "<green>Your Soul Chest was created at <yellow>{world} {x}, {y}, {z}</yellow>."
+  chest-expired:        "<red>Your Soul Chest at <yellow>{world} {x}, {y}, {z}</yellow> has expired."
+  chest-looted:         "<green>You retrieved your items from your Soul Chest."
+  chest-limit-reached:  "<red>Chest limit reached (<yellow>{limit}</yellow>). Your oldest chest was removed."
+  no-chests:            "<yellow>You have no active Soul Chests."
+  no-permission:        "<red>You don't have permission to do that."
+  chest-not-found:      "<red>Soul Chest not found."
+  teleporting:          "<green>Teleporting to your Soul Chest\u2026"
+  fetching:             "<green>Fetching your Soul Chest to your location\u2026"
+  chest-unlocked:       "<green>Your Soul Chest is now <bold>unlocked</bold> for all players."
+  chest-deleted:        "<red>Soul Chest deleted."
+  admin-chest-deleted:  "<red>Deleted <yellow>{player}</yellow>'s Soul Chest."
+  config-reloaded:      "<green>Configuration reloaded successfully."
+  player-not-found:     "<red>Player not found."
+  invalid-number:       "<red>Please provide a valid number."
+  limit-set:            "<green>Set <yellow>{player}</yellow>'s Soul Chest limit to <yellow>{limit}</yellow>."
+  pvp-disabled:         "<yellow>SoulChest does not spawn on PvP deaths (disabled in config)."
+  safe-location-found:  "<aqua>Your Soul Chest was placed at the nearest safe location."
+  spawn-fallback-used:  "<aqua>No safe location found near your death point — your Soul Chest was placed at the world spawn for safekeeping."
+  toggle-on:            "<green>SoulChest spawning is now <bold>ENABLED</bold> for you."
+  toggle-off:           "<yellow>SoulChest spawning is now <bold>DISABLED</bold> for you."
+  symbol-changed:       "<green>Symbol changed to <yellow>{symbol}</yellow>."
+  no-safe-location:     "<red>No safe location found — items dropped at death location."
