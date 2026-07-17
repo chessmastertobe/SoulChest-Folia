@@ -1,12 +1,14 @@
-name: SoulChest
+name: SoulChest-Folia
 version: '${project.version}'
 main: com.soulchest.SoulChest
 api-version: '1.21'
+folia-supported: true
 description: >
-  Feature-rich death chest plugin for Paper 26.1.
-  Saves inventory in a protected soul chest on death, with full GUI management.
-authors: [ SoulChestDev ]
-website: https://github.com/soulchest
+  Folia-compatible death chest plugin for Paper & Folia 1.21+.
+  Stores player inventory, armor, off-hand items and XP in protected chests on death.
+  Features GUI management, holograms, teleport to chest, and fetch chest to player.
+authors: [ chessmastertobe ]
+website: https://github.com/chessmastertobe/SoulChest-Folia
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Commands
@@ -21,8 +23,7 @@ commands:
 # Permissions
 # ──────────────────────────────────────────────────────────────────────────────
 permissions:
-
-  # ── Player permissions ──
+  # (Keep all the existing permissions exactly as they are)
   soulchest.use:
     description: Spawns a SoulChest instead of dropping items when the player dies.
     default: true
@@ -55,9 +56,6 @@ permissions:
     description: Allows the player to toggle SoulChest spawning on/off for themselves.
     default: true
 
-  # ── Limit override permissions (highest number wins) ──
-  # Grant "soulchest.limit.10" to give a player a limit of 10 chests.
-  # Scanning from 1–100; the highest held permission wins.
   soulchest.limit.1:
     description: Override max chest limit to 1.
     default: false
@@ -80,7 +78,6 @@ permissions:
     description: Unlimited death chests.
     default: false
 
-  # ── Admin permissions ──
   soulchest.admin:
     description: Access to all /sc admin sub-commands.
     default: op
@@ -96,7 +93,6 @@ permissions:
     description: Allows checking the plugin version.
     default: true
 
-  # ── Meta permission ──
   soulchest.*:
     description: Grants ALL SoulChest permissions.
     default: false
