@@ -90,7 +90,7 @@ public class SoulChestCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(MessageUtils.parse(
                 "<light_purple><bold>⚰ SoulChest</bold></light_purple> "
               + "<gray>v" + plugin.getDescription().getVersion()
-              + " — Paper 26.1 (1.21.11)</gray>"));
+              + " — Paper/Folia 1.21+</gray>"));
     }
 
     private void handleReload(CommandSender sender) {
@@ -150,6 +150,8 @@ public class SoulChestCommand implements CommandExecutor, TabCompleter {
         if (loc == null) {
             MessageUtils.send(player, prefix() + "&cChest world is not loaded."); return;
         }
+
+        // Using teleportAsync is already Folia-safe
         player.teleportAsync(loc.clone().add(0.5, 1.0, 0.5)).thenRun(() -> {
             MessageUtils.send(player, prefix() + msg("teleporting"));
             player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT,

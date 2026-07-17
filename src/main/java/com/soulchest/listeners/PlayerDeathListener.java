@@ -11,6 +11,7 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
@@ -105,7 +106,10 @@ public class PlayerDeathListener implements Listener {
                 symbol
         );
 
-        chestManager.spawnChest(data);
+        // Schedule chest creation for strict Folia safety
+        Bukkit.getRegionScheduler().execute(plugin, chestLoc, () -> {
+            chestManager.spawnChest(data);
+        });
 
         String createdMsg = msg("chest-created")
                 .replace("{world}", chestLoc.getWorld().getName())
@@ -133,7 +137,7 @@ public class PlayerDeathListener implements Listener {
             tpButton = Component
                     .text("[ Teleport to Chest ]", NamedTextColor.AQUA, TextDecoration.BOLD)
                     .decoration(TextDecoration.ITALIC, false)
-                    .clickEvent(ClickEvent.runCommand("/sc tp " + chestId))
+                    .clickEvent(ClickEvent.runCommand("/soulchest tp " + chestId))
                     .hoverEvent(HoverEvent.showText(
                             Component.text("Click to teleport to your Soul Chest",
                                     NamedTextColor.GRAY)));
@@ -143,7 +147,7 @@ public class PlayerDeathListener implements Listener {
             fetchButton = Component
                     .text("[ Fetch to Me ]", NamedTextColor.GREEN, TextDecoration.BOLD)
                     .decoration(TextDecoration.ITALIC, false)
-                    .clickEvent(ClickEvent.runCommand("/sc fetch " + chestId))
+                    .clickEvent(ClickEvent.runCommand("/soulchest fetch " + chestId))
                     .hoverEvent(HoverEvent.showText(
                             Component.text("Click to pull the chest to your location",
                                     NamedTextColor.GRAY)));

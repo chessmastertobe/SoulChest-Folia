@@ -46,14 +46,14 @@ public final class SoulChestData {
         this.y              = y;
         this.z              = z;
         this.contents       = (contents != null) ? new ArrayList<>(contents) : new ArrayList<>();
-        this.armour         = (armour   != null) ? armour.clone()            : new ItemStack[4];
+        this.armour         = (armour != null) ? armour.clone() : new ItemStack[4];
         this.offHand        = offHand;
         this.storedXp       = storedXp;
         this.creationTime   = creationTime;
         this.expirationTime = expirationTime;
         this.locked         = locked;
         this.causeOfDeath   = (causeOfDeath != null) ? causeOfDeath : "Unknown";
-        this.symbol         = (symbol       != null) ? symbol        : "⛀";
+        this.symbol         = (symbol != null) ? symbol : "⚰";
     }
 
     public static SoulChestData create(String id,
@@ -68,8 +68,9 @@ public final class SoulChestData {
                                        boolean locked,
                                        String causeOfDeath,
                                        String symbol) {
-        long now        = System.currentTimeMillis();
-        long expiration = (durationSecs <= 0) ? -1L : now + (durationSecs * 1_000L);
+        long now = System.currentTimeMillis();
+        long expiration = (durationSecs <= 0) ? -1L : now + (durationSecs * 1000L);
+
         return new SoulChestData(
                 id, ownerUUID, ownerName,
                 chestLocation.getWorld().getName(),
@@ -111,20 +112,21 @@ public final class SoulChestData {
 
     public long secondsRemaining() {
         if (expirationTime == -1) return -1L;
-        long remaining = (expirationTime - System.currentTimeMillis()) / 1_000L;
+        long remaining = (expirationTime - System.currentTimeMillis()) / 1000L;
         return Math.max(0, remaining);
     }
 
     public String formattedTimeLeft() {
         long secs = secondsRemaining();
-        if (secs == -1) return "oo";
-        if (secs ==  0) return "Expired";
+        if (secs == -1) return "∞";
+        if (secs == 0) return "Expired";
         long mins = secs / 60;
-        long s    = secs % 60;
+        long s = secs % 60;
         return String.format("%02d:%02d", mins, s);
     }
 
     public Location toLocation() {
+        if (worldName == null) return null;
         World world = Bukkit.getWorld(worldName);
         if (world == null) return null;
         return new Location(world, x, y, z);
@@ -144,6 +146,7 @@ public final class SoulChestData {
 
     public SoulChestData withLocation(Location loc) {
         if (loc == null || loc.getWorld() == null) return this;
+
         return new SoulChestData(id, ownerUUID, ownerName,
                 loc.getWorld().getName(),
                 loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(),
@@ -151,6 +154,7 @@ public final class SoulChestData {
                 creationTime, expirationTime, locked, causeOfDeath, symbol);
     }
 
+    // Getters
     public String          getId()             { return id; }
     public UUID            getOwnerUUID()      { return ownerUUID; }
     public String          getOwnerName()      { return ownerName; }
@@ -176,12 +180,15 @@ public final class SoulChestData {
     }
 
     @Override
-    public int hashCode() { return id.hashCode(); }
+    public int hashCode() {
+        return id.hashCode();
+    }
 
     @Override
     public String toString() {
-        return "SoulChest{id=" + id + ", owner=" + ownerName
-               + ", loc=[" + worldName + " " + x + "," + y + "," + z + "]"
-               + ", expired=" + isExpired() + "}";
+        return "SoulChest{id=" + id +
+                ", owner=" + ownerName +
+                ", loc=[" + worldName + " " + x + "," + y + "," + z + "]" +
+                ", expired=" + isExpired() + "}";
     }
 }

@@ -2,9 +2,9 @@ package com.soulchest.impl;
 
 import com.soulchest.SoulChest;
 import com.soulchest.model.SoulChestData;
-import com.soulchest.util.FoliaUtil;
 import com.soulchest.util.MessageUtils;
 import com.soulchest.util.SafeLocationFinder;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
@@ -14,29 +14,24 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class ChestManager {
 
-    public static final NamespacedKey KEY_CHEST_ID    =
-            new NamespacedKey("soulchest", "chest_id");
-    public static final NamespacedKey KEY_HOLOGRAM_ID =
-            new NamespacedKey("soulchest", "hologram_id");
+    public static final NamespacedKey KEY_CHEST_ID    = new NamespacedKey("soulchest", "chest_id");
+    public static final NamespacedKey KEY_HOLOGRAM_ID = new NamespacedKey("soulchest", "hologram_id");
 
     private final SoulChest   plugin;
     private final DataManager dataManager;
 
     private final Map<String, SoulChestData> cache       = new ConcurrentHashMap<>();
     private final Map<String, UUID>          holograms   = new ConcurrentHashMap<>();
-    private final Map<String, Object>        expiryTasks = new ConcurrentHashMap<>();
+    private final Map<String, ScheduledTask> expiryTasks = new ConcurrentHashMap<>();
 
-    private Object hologramRefreshTask;
+    private ScheduledTask hologramRefreshTask;
 
     public ChestManager(SoulChest plugin, DataManager dataManager) {
         this.plugin      = plugin;
@@ -51,34 +46,21 @@ public class ChestManager {
 
     public void onDisable() {
         if (hologramRefreshTask != null) {
-            cancelTask(hologramRefreshTask);
+            hologramRefreshTask.cancel();
         }
-        for (Object task : expiryTasks.values()) {
-            cancelTask(task);
+        for (ScheduledTask task : expiryTasks.values()) {
+            if (task != null) task.cancel();
         }
         expiryTasks.clear();
         dataManager.close();
     }
 
-    private void cancelTask(Object task) {
-        if (task == null) return;
-        try {
-            if (task instanceof org.bukkit.scheduler.BukkitTask bukkitTask) {
-                bukkitTask.cancel();
-            } else if (task.getClass().getName().contains("ScheduledTask")) {
-                task.getClass().getMethod("cancel").invoke(task);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Failed to cancel task: " + e.getMessage());
-        }
-    }
-
     private void cleanupOrphanedHolograms() {
-        int removed = 0;
-        for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (entity instanceof TextDisplay td) {
-                    String id = td.getPersistentDataContainer()
+        Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
+            int removed = 0;
+            for (World world : Bukkit.getWorlds()) {
+                for (Entity entity : world.getEntitiesByClass(TextDisplay.class)) {
+                    String id = entity.getPersistentDataContainer()
                             .get(KEY_HOLOGRAM_ID, PersistentDataType.STRING);
                     if (id != null) {
                         entity.remove();
@@ -86,47 +68,54 @@ public class ChestManager {
                     }
                 }
             }
-        }
-        if (removed > 0)
-            plugin.getLogger().info("[SoulChest] Cleaned up " + removed + " orphaned hologram(s).");
+            if (removed > 0) {
+                plugin.getLogger().info("[SoulChest] Cleaned up " + removed + " orphaned hologram(s).");
+            }
+        });
     }
 
     private void loadAllChests() {
         List<SoulChestData> all = dataManager.loadAllChests();
         int loaded = 0;
+
         for (SoulChestData chest : all) {
             cache.put(chest.getId(), chest);
+
             if (!chest.isExpired()) {
                 scheduleExpiry(chest);
-                spawnHologram(chest);
+                spawnHologram(chest);   // Now safely scheduled inside spawnHologram()
                 loaded++;
             } else {
-                FoliaUtil.runGlobalTaskLater(plugin, () -> expireChest(chest), 1);
+                expireChest(chest);
             }
         }
         plugin.getLogger().info("[SoulChest] Loaded " + loaded + " SoulChest(s) from database.");
     }
 
     public void spawnChest(SoulChestData data) {
-        Location loc = data.toLocation();
+        final Location loc = data.toLocation();
         if (loc == null || loc.getWorld() == null) {
-            plugin.getLogger().warning(
-                    "[SoulChest] Cannot spawn - world '" + data.getWorldName() + "' not loaded.");
+            plugin.getLogger().warning("[SoulChest] Cannot spawn - world '" 
+                    + data.getWorldName() + "' not loaded.");
             return;
         }
 
         enforceLimit(data.getOwnerUUID());
 
-        Block block = loc.getBlock();
-        block.setType(Material.CHEST, false);
-        tagChestBlock(block, data.getId());
+        final SoulChestData finalData = data;
 
-        if (plugin.getConfig().getBoolean("general.spawn-effects", true)) {
-            loc.getWorld().spawnParticle(Particle.SOUL,
-                    loc.clone().add(0.5, 0.5, 0.5), 30, 0.3, 0.3, 0.3, 0.05);
-            loc.getWorld().playSound(loc, Sound.BLOCK_SOUL_SAND_PLACE,
-                    SoundCategory.BLOCKS, 1f, 0.8f);
-        }
+        Bukkit.getRegionScheduler().execute(plugin, loc, () -> {
+            Block block = loc.getBlock();
+            block.setType(Material.CHEST, false);
+            tagChestBlock(block, finalData.getId());
+
+            if (plugin.getConfig().getBoolean("general.spawn-effects", true)) {
+                loc.getWorld().spawnParticle(Particle.SOUL,
+                        loc.clone().add(0.5, 0.5, 0.5), 30, 0.3, 0.3, 0.3, 0.05);
+                loc.getWorld().playSound(loc, Sound.BLOCK_SOUL_SAND_PLACE,
+                        SoundCategory.BLOCKS, 1f, 0.8f);
+            }
+        });
 
         cache.put(data.getId(), data);
         dataManager.saveChest(data);
@@ -138,19 +127,23 @@ public class ChestManager {
     }
 
     public SoulChestData relocateChest(SoulChestData data, Location requestedLoc) {
-        Location newLoc = SafeLocationFinder.findSafe(requestedLoc, 1);
-        if (newLoc == null) newLoc = requestedLoc;
+        Location safeLoc = SafeLocationFinder.findSafe(requestedLoc, 1);
+        final Location newLoc = (safeLoc != null) ? safeLoc : requestedLoc;
 
         Location oldLoc = data.toLocation();
         if (oldLoc != null && oldLoc.getWorld() != null
                 && oldLoc.getBlock().getType() == Material.CHEST) {
-            oldLoc.getBlock().setType(Material.AIR, false);
+            Bukkit.getRegionScheduler().execute(plugin, oldLoc, () -> {
+                oldLoc.getBlock().setType(Material.AIR, false);
+            });
         }
 
         removeHologram(data.getId());
 
-        newLoc.getBlock().setType(Material.CHEST, false);
-        tagChestBlock(newLoc.getBlock(), data.getId());
+        Bukkit.getRegionScheduler().execute(plugin, newLoc, () -> {
+            newLoc.getBlock().setType(Material.CHEST, false);
+            tagChestBlock(newLoc.getBlock(), data.getId());
+        });
 
         SoulChestData updated = data.withLocation(newLoc);
         cache.put(updated.getId(), updated);
@@ -163,16 +156,24 @@ public class ChestManager {
     }
 
     public void removeChest(SoulChestData data, boolean dropContents) {
-        Object task = expiryTasks.remove(data.getId());
-        if (task != null) cancelTask(task);
+        ScheduledTask task = expiryTasks.remove(data.getId());
+        if (task != null) task.cancel();
 
         removeHologram(data.getId());
 
         Location loc = data.toLocation();
         if (loc != null && loc.getWorld() != null) {
-            Block block = loc.getBlock();
-            if (block.getType() == Material.CHEST) block.setType(Material.AIR, false);
-            if (dropContents) dropAllItems(data, loc);
+            Bukkit.getRegionScheduler().execute(plugin, loc, () -> {
+                Block block = loc.getBlock();
+                if (block.getType() == Material.CHEST) {
+                    block.setType(Material.AIR, false);
+                }
+                if (dropContents) {
+                    dropAllItems(data, loc);
+                }
+            });
+        } else if (dropContents) {
+            dropAllItems(data, data.toLocation());
         }
 
         cache.remove(data.getId());
@@ -199,7 +200,7 @@ public class ChestManager {
     }
 
     public void lootChest(Player player, SoulChestData data) {
-        Location dropLoc  = player.getLocation();
+        Location dropLoc = player.getLocation();
         List<ItemStack> leftOver = new ArrayList<>();
 
         for (ItemStack item : data.getContents()) {
@@ -208,7 +209,7 @@ public class ChestManager {
             leftOver.addAll(overflow.values());
         }
 
-        ItemStack[] stored  = data.getArmour();
+        ItemStack[] stored = data.getArmour();
         ItemStack[] current = player.getInventory().getArmorContents().clone();
         for (int i = 0; i < stored.length; i++) {
             if (stored[i] == null || stored[i].getType() == Material.AIR) continue;
@@ -235,12 +236,19 @@ public class ChestManager {
             player.giveExp(data.getStoredXp(), true);
         }
 
-        for (ItemStack ov : leftOver)
-            dropLoc.getWorld().dropItemNaturally(dropLoc, ov);
+        if (!leftOver.isEmpty()) {
+            Bukkit.getRegionScheduler().execute(plugin, dropLoc, () -> {
+                for (ItemStack ov : leftOver) {
+                    dropLoc.getWorld().dropItemNaturally(dropLoc, ov);
+                }
+            });
+        }
 
         removeChest(data, false);
         MessageUtils.send(player, prefix() + cfg("messages.chest-looted", ""));
     }
+
+    // ... (rest of the methods remain mostly the same as they were already using proper schedulers)
 
     public List<SoulChestData> getChestsForPlayer(UUID playerUUID) {
         return cache.values().stream()
@@ -304,36 +312,53 @@ public class ChestManager {
         if (loc == null || loc.getWorld() == null) return;
 
         double yOffset = plugin.getConfig().getDouble("hologram.y-offset", 1.5);
-        Location hLoc  = loc.clone().add(0.5, yOffset, 0.5);
+        Location hLoc = loc.clone().add(0.5, yOffset, 0.5);
 
-        TextDisplay display = (TextDisplay) hLoc.getWorld()
-                .spawnEntity(hLoc, EntityType.TEXT_DISPLAY);
-        display.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
-        display.setDefaultBackground(false);
-        display.setSeeThrough(false);
-        display.setPersistent(true);
-        display.setVisibleByDefault(true);
+        Bukkit.getRegionScheduler().execute(plugin, hLoc, () -> {
+            try {
+                TextDisplay display = (TextDisplay) hLoc.getWorld()
+                        .spawnEntity(hLoc, EntityType.TEXT_DISPLAY);
 
-        display.getPersistentDataContainer()
-                .set(KEY_HOLOGRAM_ID, PersistentDataType.STRING, data.getId());
+                display.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+                display.setDefaultBackground(false);
+                display.setSeeThrough(false);
+                display.setPersistent(true);
+                display.setVisibleByDefault(true);
 
-        updateHologramText(display, data);
-        holograms.put(data.getId(), display.getUniqueId());
+                display.getPersistentDataContainer()
+                        .set(KEY_HOLOGRAM_ID, PersistentDataType.STRING, data.getId());
+
+                updateHologramText(display, data);
+                holograms.put(data.getId(), display.getUniqueId());
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to spawn hologram for chest " + data.getId());
+            }
+        });
     }
 
     private void removeHologram(String chestId) {
         UUID uid = holograms.remove(chestId);
         if (uid == null) return;
+
         Entity entity = Bukkit.getEntity(uid);
-        if (entity != null) entity.remove();
+        if (entity != null) {
+            // Safe way on Folia - run on the entity's own region thread
+            entity.getScheduler().run(plugin, scheduledTask -> {
+                if (entity.isValid()) {
+                    entity.remove();
+                }
+            }, null);
+        }
     }
 
     private void updateHologramText(SoulChestData data) {
         UUID uid = holograms.get(data.getId());
         if (uid == null) return;
+
         Entity entity = Bukkit.getEntity(uid);
-        if (entity instanceof TextDisplay display)
-            updateHologramText(display, data);
+        if (entity instanceof TextDisplay display) {
+            display.getScheduler().run(plugin, st -> updateHologramText(display, data), null);
+        }
     }
 
     private void updateHologramText(TextDisplay display, SoulChestData data) {
@@ -359,10 +384,13 @@ public class ChestManager {
         display.text(MessageUtils.parseAny(sb.toString()));
     }
 
-    // ==================== Folia-Compatible Scheduling ====================
-
     private void startHologramRefresh() {
-        hologramRefreshTask = scheduleRepeatingTask(this::updateAllHolograms, 20L, 20L);
+        hologramRefreshTask = Bukkit.getGlobalRegionScheduler().runAtFixedRate(
+                plugin,
+                task -> updateAllHolograms(),
+                20L,
+                20L
+        );
     }
 
     private void scheduleExpiry(SoulChestData data) {
@@ -371,35 +399,22 @@ public class ChestManager {
 
         long delayMillis = expiration - System.currentTimeMillis();
         if (delayMillis <= 0) {
-            FoliaUtil.runGlobalTaskLater(plugin, () -> expireChest(data), 1);
+            Bukkit.getGlobalRegionScheduler().execute(plugin, () -> expireChest(data));
             return;
         }
 
         long delayTicks = Math.max(1L, delayMillis / 50L);
-        Object task = scheduleDelayedTask(() -> {
-            SoulChestData current = cache.get(data.getId());
-            if (current != null) expireChest(current);
-        }, delayTicks);
 
-        if (task != null) {
-            expiryTasks.put(data.getId(), task);
-        }
-    }
+        ScheduledTask task = Bukkit.getGlobalRegionScheduler().runDelayed(
+                plugin,
+                st -> {
+                    SoulChestData current = cache.get(data.getId());
+                    if (current != null) expireChest(current);
+                },
+                delayTicks
+        );
 
-    private Object scheduleDelayedTask(Runnable task, long delayTicks) {
-        if (FoliaUtil.isFolia()) {
-            return Bukkit.getGlobalRegionScheduler().runDelayed(plugin, st -> task.run(), delayTicks);
-        } else {
-            return Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);
-        }
-    }
-
-    private Object scheduleRepeatingTask(Runnable task, long initialDelay, long period) {
-        if (FoliaUtil.isFolia()) {
-            return Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, st -> task.run(), initialDelay, period);
-        } else {
-            return Bukkit.getScheduler().runTaskTimer(plugin, task, initialDelay, period);
-        }
+        expiryTasks.put(data.getId(), task);
     }
 
     private void updateAllHolograms() {
@@ -417,17 +432,22 @@ public class ChestManager {
     }
 
     private void dropAllItems(SoulChestData data, Location loc) {
-        World world = loc.getWorld();
-        if (world == null) return;
-        for (ItemStack item : data.getContents())
-            if (item != null && item.getType() != Material.AIR)
-                world.dropItemNaturally(loc, item);
-        for (ItemStack piece : data.getArmour())
-            if (piece != null && piece.getType() != Material.AIR)
-                world.dropItemNaturally(loc, piece);
-        ItemStack off = data.getOffHand();
-        if (off != null && off.getType() != Material.AIR)
-            world.dropItemNaturally(loc, off);
+        if (loc == null || loc.getWorld() == null) return;
+
+        Bukkit.getRegionScheduler().execute(plugin, loc, () -> {
+            World world = loc.getWorld();
+            for (ItemStack item : data.getContents())
+                if (item != null && item.getType() != Material.AIR)
+                    world.dropItemNaturally(loc, item);
+
+            for (ItemStack piece : data.getArmour())
+                if (piece != null && piece.getType() != Material.AIR)
+                    world.dropItemNaturally(loc, piece);
+
+            ItemStack off = data.getOffHand();
+            if (off != null && off.getType() != Material.AIR)
+                world.dropItemNaturally(loc, off);
+        });
     }
 
     private String prefix() {
@@ -439,5 +459,7 @@ public class ChestManager {
         return plugin.getConfig().getString(key, fallback);
     }
 
-    public DataManager getDataManager() { return dataManager; }
+    public DataManager getDataManager() {
+        return dataManager;
+    }
 }

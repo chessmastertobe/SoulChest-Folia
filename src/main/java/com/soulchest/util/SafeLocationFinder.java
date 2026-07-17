@@ -13,41 +13,31 @@ public final class SafeLocationFinder {
     private SafeLocationFinder() {}
 
     private static final Set<Material> HAZARD_FLOOR = EnumSet.of(
-            Material.LAVA,
-            Material.FIRE,
-            Material.MAGMA_BLOCK,
-            Material.CACTUS,
-            Material.SWEET_BERRY_BUSH,
-            Material.WITHER_ROSE,
-            Material.POWDER_SNOW
+            Material.LAVA, Material.FIRE, Material.MAGMA_BLOCK,
+            Material.CACTUS, Material.SWEET_BERRY_BUSH,
+            Material.WITHER_ROSE, Material.POWDER_SNOW
     );
 
     private static final Set<Material> DEADLY_SPACE = EnumSet.of(
-            Material.LAVA,
-            Material.FIRE,
-            Material.MAGMA_BLOCK,
-            Material.WITHER_ROSE,
-            Material.SWEET_BERRY_BUSH,
-            Material.CACTUS,
-            Material.POWDER_SNOW
+            Material.LAVA, Material.FIRE, Material.MAGMA_BLOCK,
+            Material.WITHER_ROSE, Material.SWEET_BERRY_BUSH,
+            Material.CACTUS, Material.POWDER_SNOW
     );
 
     private static final int NETHER_MAX_Y = 110;
 
     public static boolean isSafe(Location loc) {
-        if (loc == null) return false;
-        World world = loc.getWorld();
-        if (world == null) return false;
+        if (loc == null || loc.getWorld() == null) return false;
 
+        World world = loc.getWorld();
         int x = loc.getBlockX();
         int y = loc.getBlockY();
         int z = loc.getBlockZ();
 
-        if (y - 1 < world.getMinHeight()) return false;
-        if (y + 1 >= world.getMaxHeight()) return false;
+        if (y - 1 < world.getMinHeight() || y + 1 >= world.getMaxHeight()) return false;
 
         Block floorBlock = world.getBlockAt(x, y - 1, z);
-        Block chestBlock = world.getBlockAt(x, y,     z);
+        Block chestBlock = world.getBlockAt(x, y, z);
         Block headBlock  = world.getBlockAt(x, y + 1, z);
 
         if (!isValidFloor(floorBlock)) return false;
@@ -59,11 +49,11 @@ public final class SafeLocationFinder {
     }
 
     public static boolean isDangerous(Location loc) {
-        if (loc == null) return false;
-        World world = loc.getWorld();
-        if (world == null) return false;
+        if (loc == null || loc.getWorld() == null) return false;
 
+        World world = loc.getWorld();
         int y = loc.getBlockY();
+
         if (y < world.getMinHeight()) return true;
         if (world.getEnvironment() == World.Environment.THE_END && y < 0) return true;
 
@@ -77,24 +67,26 @@ public final class SafeLocationFinder {
         return false;
     }
 
-    public static Location findSafeGuaranteed(Location deathLoc,
-                                               int radiusChunks,
-                                               boolean alwaysSearch) {
+    public static Location findSafeGuaranteed(Location deathLoc, int radiusChunks, boolean alwaysSearch) {
+        if (deathLoc == null || deathLoc.getWorld() == null) return null;
+
         World world = deathLoc.getWorld();
 
         Location near = findSafe(deathLoc, radiusChunks);
         if (near != null) return near;
 
-        Location spawnLoc  = world.getSpawnLocation();
+        Location spawnLoc = world.getSpawnLocation();
         Location nearSpawn = findSafe(spawnLoc, 5);
         if (nearSpawn != null) return nearSpawn;
 
-        int sx   = spawnLoc.getBlockX();
-        int sz   = spawnLoc.getBlockZ();
+        int sx = spawnLoc.getBlockX();
+        int sz = spawnLoc.getBlockZ();
         int yMin = chestYMin(world);
         int yMax = chestYMax(world);
 
+        // Load spawn chunk safely
         world.getChunkAt(sx >> 4, sz >> 4).load(true);
+
         for (int y = yMax; y >= yMin; y--) {
             Location c = new Location(world, sx, y, sz);
             if (isSafe(c)) return c;
@@ -104,22 +96,20 @@ public final class SafeLocationFinder {
     }
 
     public static Location findSafe(Location origin, int radiusChunks) {
-        if (origin == null) return null;
-        World world = origin.getWorld();
-        if (world == null) return null;
+        if (origin == null || origin.getWorld() == null) return null;
 
+        World world = origin.getWorld();
         int rBlocks = radiusChunks * 16;
-        int ox      = origin.getBlockX();
-        int oy      = origin.getBlockY();
-        int oz      = origin.getBlockZ();
-        int yMin    = chestYMin(world);
-        int yMax    = chestYMax(world);
+        int ox = origin.getBlockX();
+        int oy = origin.getBlockY();
+        int oz = origin.getBlockZ();
+        int yMin = chestYMin(world);
+        int yMax = chestYMax(world);
 
         int maxYStep = Math.max(oy - yMin, yMax - oy) + 1;
 
         for (int yStep = 0; yStep <= maxYStep; yStep++) {
             for (int shell = 0; shell <= rBlocks; shell++) {
-
                 if (shell == 0) {
                     Location h = checkY(world, ox, oz, oy, yStep, yMin, yMax);
                     if (h != null) return h;
@@ -139,13 +129,11 @@ public final class SafeLocationFinder {
                 }
             }
         }
-
         return null;
     }
 
-    private static Location checkY(World world, int x, int z,
-                                   int originY, int yStep,
-                                   int yMin, int yMax) {
+    private static Location checkY(World world, int x, int z, int originY,
+                                   int yStep, int yMin, int yMax) {
         if (!world.isChunkLoaded(x >> 4, z >> 4)) return null;
 
         if (yStep == 0) {
@@ -185,9 +173,9 @@ public final class SafeLocationFinder {
 
     private static boolean isValidFloor(Block block) {
         Material mat = block.getType();
-        if (mat.isAir())                      return false;
-        if (HAZARD_FLOOR.contains(mat))       return false;
-        if (mat.isSolid())                    return true;
+        if (mat.isAir()) return false;
+        if (HAZARD_FLOOR.contains(mat)) return false;
+        if (mat.isSolid()) return true;
         return !DEADLY_SPACE.contains(mat);
     }
 

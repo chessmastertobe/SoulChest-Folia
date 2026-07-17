@@ -32,6 +32,7 @@ public class ChestInteractListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+
         Block block = event.getClickedBlock();
         if (block == null || block.getType() != Material.CHEST) return;
 
@@ -39,7 +40,6 @@ public class ChestInteractListener implements Listener {
         if (data == null) return;
 
         event.setCancelled(true);
-
         Player player = event.getPlayer();
 
         if (data.isExpired()) {
@@ -65,7 +65,6 @@ public class ChestInteractListener implements Listener {
         if (data == null) return;
 
         Player player = event.getPlayer();
-
         boolean allowBreak = plugin.getConfig().getBoolean("protection.allow-break-to-loot", false);
 
         if (!allowBreak) {
@@ -92,15 +91,15 @@ public class ChestInteractListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
-        removeChestBlocksFromExplosion(event.blockList().iterator());
+        removeProtectedChestsFromExplosion(event.blockList().iterator());
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
-        removeChestBlocksFromExplosion(event.blockList().iterator());
+        removeProtectedChestsFromExplosion(event.blockList().iterator());
     }
 
-    private void removeChestBlocksFromExplosion(Iterator<Block> blocks) {
+    private void removeProtectedChestsFromExplosion(Iterator<Block> blocks) {
         while (blocks.hasNext()) {
             Block block = blocks.next();
             if (block.getType() == Material.CHEST

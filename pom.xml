@@ -7,19 +7,19 @@
 
     <groupId>com.soulchest</groupId>
     <artifactId>SoulChest-Folia</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <packaging>jar</packaging>
 
     <name>SoulChest-Folia</name>
     <description>
-        Folia-compatible death chest plugin for Paper &amp; Folia 1.21+.
+        Strict Folia-only death chest plugin for Folia 1.21+.
         Stores player inventory, armor, and XP in protected chests on death with GUI, holograms, teleport, and fetch features.
     </description>
 
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <paper.version>1.21.11-R0.1-SNAPSHOT</paper.version>
+        <folia.version>1.21.11-R0.1-SNAPSHOT</folia.version> <!-- Update this as needed (latest stable Folia builds are also available) -->
     </properties>
 
     <repositories>
@@ -30,11 +30,11 @@
     </repositories>
 
     <dependencies>
-        <!-- Paper API (provided at runtime by the server) -->
+        <!-- Folia API (provided by the Folia server) -->
         <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
-            <version>${paper.version}</version>
+            <groupId>dev.folia</groupId>
+            <artifactId>folia-api</artifactId>
+            <version>${folia.version}</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
@@ -104,6 +104,7 @@
                             </filters>
                             <artifactSet>
                                 <excludes>
+                                    <exclude>dev.folia:*</exclude>
                                     <exclude>io.papermc.paper:*</exclude>
                                     <exclude>org.bukkit:*</exclude>
                                     <exclude>org.slf4j:*</exclude>

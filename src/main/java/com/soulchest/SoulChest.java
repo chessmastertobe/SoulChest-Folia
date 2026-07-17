@@ -31,9 +31,12 @@ public class SoulChest extends JavaPlugin {
 
         dataManager  = new DataManager(this);
         chestManager = new ChestManager(this, dataManager);
+
+        // ChestManager.onEnable() now handles Folia-safe loading internally
         chestManager.onEnable();
 
         guiListener = new GUIListener(this);
+
         PluginManager pm = Bukkit.getPluginManager();
         pm.registerEvents(new PlayerDeathListener(this, chestManager), this);
         pm.registerEvents(new ChestInteractListener(this, chestManager), this);
@@ -49,7 +52,7 @@ public class SoulChest extends JavaPlugin {
         }
 
         Bukkit.getConsoleSender().sendMessage(Component.text(
-                "[SoulChest] Enabled. Running on Paper 26.1 (1.21.11).",
+                "[SoulChest] Enabled successfully. Running in strict Folia mode.",
                 NamedTextColor.LIGHT_PURPLE));
     }
 
@@ -58,8 +61,9 @@ public class SoulChest extends JavaPlugin {
         if (chestManager != null) {
             chestManager.onDisable();
         }
+
         Bukkit.getConsoleSender().sendMessage(Component.text(
-                "[SoulChest] Disabled. All tasks cancelled.",
+                "[SoulChest] Disabled. All scheduled tasks cancelled.",
                 NamedTextColor.GRAY));
     }
 

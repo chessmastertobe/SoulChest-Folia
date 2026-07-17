@@ -86,17 +86,15 @@ public class ChestManageGUI {
                             Component.text("Items cannot be removed.", NamedTextColor.DARK_GRAY))));
 
         if (isOwner || isAdminView) {
-            if (data.isLocked()) {
-                inv.setItem(SLOT_UNLOCK, makeItem(Material.TRIPWIRE_HOOK,
-                        Component.text("Unlock Chest", NamedTextColor.GOLD, TextDecoration.BOLD),
-                        List.of(Component.text("Allow anyone to open this chest.", NamedTextColor.GRAY))));
-            } else {
-                inv.setItem(SLOT_UNLOCK, makeItem(Material.TRIPWIRE_HOOK,
-                        Component.text("Lock Chest", NamedTextColor.GOLD, TextDecoration.BOLD),
-                        List.of(
-                                Component.text("Currently: Unlocked", NamedTextColor.RED),
-                                Component.text("Click to protect again.", NamedTextColor.GRAY))));
-            }
+            Material icon = data.isLocked() ? Material.TRIPWIRE_HOOK : Material.TRIPWIRE_HOOK;
+            String title = data.isLocked() ? "Unlock Chest" : "Lock Chest";
+            inv.setItem(SLOT_UNLOCK, makeItem(icon,
+                    Component.text(title, NamedTextColor.GOLD, TextDecoration.BOLD),
+                    data.isLocked()
+                            ? List.of(Component.text("Allow anyone to open this chest.", NamedTextColor.GRAY))
+                            : List.of(
+                                    Component.text("Currently: Unlocked", NamedTextColor.RED),
+                                    Component.text("Click to protect again.", NamedTextColor.GRAY))));
         }
 
         if (isOwner || isAdminView) {
@@ -135,7 +133,7 @@ public class ChestManageGUI {
             case SLOT_DELETE   -> { handleDelete();      yield true; }
             case SLOT_BACK     -> {
                 viewer.closeInventory();
-                Bukkit.getScheduler().runTaskLater(plugin, parentGUI::open, 1L);
+                Bukkit.getGlobalRegionScheduler().runDelayed(plugin, task -> parentGUI.open(), 1L);
                 yield true;
             }
             default -> false;
@@ -225,7 +223,7 @@ public class ChestManageGUI {
             MessageUtils.send(viewer, prefix() + msg("no-permission")); return;
         }
         List<String> symbols = Arrays.asList(SYMBOLS);
-        int currentIdx  = symbols.indexOf(data.getSymbol());
+        int currentIdx = symbols.indexOf(data.getSymbol());
         String nextSymbol = SYMBOLS[(currentIdx + 1) % SYMBOLS.length];
         SoulChestData updated = data.withSymbol(nextSymbol);
         chestManager.updateChest(updated);
@@ -246,21 +244,21 @@ public class ChestManageGUI {
                 : prefix() + msg("chest-deleted");
         MessageUtils.send(viewer, feedback);
         viewer.closeInventory();
-        Bukkit.getScheduler().runTaskLater(plugin, parentGUI::open, 1L);
+        Bukkit.getGlobalRegionScheduler().runDelayed(plugin, task -> parentGUI.open(), 1L);
     }
 
     public void handleViewBack() { open(); }
 
     private ItemStack buildInfoItem() {
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("Owner: ",    NamedTextColor.GRAY)
+        lore.add(Component.text("Owner: ", NamedTextColor.GRAY)
                 .append(Component.text(data.getOwnerName(), NamedTextColor.WHITE)));
-        lore.add(Component.text("World: ",    NamedTextColor.GRAY)
+        lore.add(Component.text("World: ", NamedTextColor.GRAY)
                 .append(Component.text(data.getWorldName(), NamedTextColor.WHITE)));
         lore.add(Component.text("Location: ", NamedTextColor.GRAY)
                 .append(Component.text(data.getX() + ", " + data.getY() + ", " + data.getZ(),
                         NamedTextColor.WHITE)));
-        lore.add(Component.text("Cause: ",    NamedTextColor.GRAY)
+        lore.add(Component.text("Cause: ", NamedTextColor.GRAY)
                 .append(Component.text(data.getCauseOfDeath(), NamedTextColor.WHITE)));
         lore.add(Component.text("Protected: ", NamedTextColor.GRAY)
                 .append(Component.text(data.isLocked() ? "Yes" : "No",
@@ -282,11 +280,16 @@ public class ChestManageGUI {
 
     private ItemStack makeItem(Material mat, Component name, List<Component> lore) {
         ItemStack item = new ItemStack(mat);
-        ItemMeta  meta = item.getItemMeta();
-        meta.displayName(name.decoration(TextDecoration.ITALIC, false));
-        if (lore != null)
-            meta.lore(lore.stream().map(l -> l.decoration(TextDecoration.ITALIC, false)).toList());
-        item.setItemMeta(meta);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(name.decoration(TextDecoration.ITALIC, false));
+            if (lore != null) {
+                meta.lore(lore.stream()
+                        .map(l -> l.decoration(TextDecoration.ITALIC, false))
+                        .toList());
+            }
+            item.setItemMeta(meta);
+        }
         return item;
     }
 
@@ -294,13 +297,16 @@ public class ChestManageGUI {
         try {
             return Material.valueOf(
                     plugin.getConfig().getString(key, fallback.name()).toUpperCase());
-        } catch (IllegalArgumentException e) { return fallback; }
+        } catch (IllegalArgumentException e) {
+            return fallback;
+        }
     }
 
     private String prefix() {
         return plugin.getConfig().getString("general.prefix",
                 "<dark_gray>[<dark_purple>⚰ <light_purple>SoulChest<dark_gray>]<reset> ");
     }
+
     private String msg(String key) {
         return plugin.getConfig().getString("messages." + key, "");
     }

@@ -30,4 +30,4 @@ server.properties
 
 # Sensitive
 *.pem
-*.key
+*.keytarget/ 
