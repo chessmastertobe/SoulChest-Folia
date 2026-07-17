@@ -6,13 +6,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.soulchest</groupId>
-    <artifactId>SoulChest</artifactId>
-    <version>1.0.0</version>
+    <artifactId>SoulChest-Folia</artifactId>
+    <version>1.1.0</version>
     <packaging>jar</packaging>
 
-    <name>SoulChest</name>
+    <name>SoulChest-Folia</name>
     <description>
-        A feature-rich death chest plugin for Paper 26.1 (Minecraft 1.21.11).
+        Folia-compatible death chest plugin for Paper &amp; Folia 1.21+.
+        Stores player inventory, armor, and XP in protected chests on death with GUI, holograms, teleport, and fetch features.
     </description>
 
     <properties>
@@ -53,7 +54,7 @@
     </dependencies>
 
     <build>
-        <finalName>SoulChest-${project.version}</finalName>
+        <finalName>SoulChest-Folia-${project.version}</finalName>
 
         <plugins>
             <plugin>

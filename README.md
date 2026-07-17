@@ -1,5 +1,18 @@
 <div align="center">
 
+# SoulChest-Folia
+
+**Folia-compatible fork** of the original SoulChest death chest plugin.
+
+This fork adds proper Folia support (`folia-supported: true`) and uses region schedulers for full compatibility with Paper and Folia 1.21+.
+
+> **Note:** This is a maintained fork focused on Folia compatibility.  
+> Original project: [trynafindbhumik/SoulChest](https://github.com/trynafindbhumik/SoulChest)
+
+---
+
+## Features
+
 # ⚰ SoulChest
 
 **A feature-rich death chest plugin for Paper 1.21.11+**
